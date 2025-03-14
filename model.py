@@ -3,6 +3,10 @@ import math
 import torch
 import torch.nn as nn
 
+"""
+Only for review
+"""
+
 
 class InputEmbeddings(nn.Module):
     def __init__(self, vocab_size, d_model):
@@ -88,7 +92,7 @@ class MultiHeadAttentionBlock(nn.Module):
     @staticmethod
     def attention(q, k, v, mask, dropout):
         d_k = q.shape[-1]
-        attention_scores = (q @ k.T) / math.sqrt(d_k)
+        attention_scores = torch.matmul(q, k.transpose(-1, -2)) / math.sqrt(d_k)
 
         if mask is not None:
             attention_scores = attention_scores.masked_fill(mask == 0, -1e9)
@@ -98,7 +102,7 @@ class MultiHeadAttentionBlock(nn.Module):
         if dropout is not None:  # tipically dropout is 0.2
             attention_scores = dropout(attention_scores)
 
-        return (attention_scores @ v), attention_scores
+        return torch.matmul(attention_scores, v), attention_scores
 
     def forward(self, q, k, v, mask):
         q = self.w_q(q)
@@ -154,3 +158,46 @@ class Encoder(nn.Module):
         for layer in self.layers:
             x = layer(x, src_mask)
         return self.norm(x)
+
+
+"""
+Only for review
+"""
+
+
+class BERTEmbedding(nn.Module):
+    def __init__(self, vocab_size, n_segment, max_len, embed_dim, dropout):
+        super().__init__()
+        self.tok_embed = nn.Embedding(vocab_size, embed_dim)
+        self.seg_embed = nn.Embedding(n_segment, embed_dim)
+        self.pos_embed = nn.Embedding(max_len, embed_dim)
+
+        self.dropout = nn.Dropout(dropout)
+        self.pos_inp = torch.tensor(
+            [i for i in range(max_len)],
+        )
+
+    def forward(self, seq, seg):
+        embed_val = (
+            self.tok_embed(seq) + self.seg_embed(seg) + self.pos_embed(self.pos_inp)
+        )
+        return embed_val
+
+
+class BERT(nn.Module):
+    def __init__(
+        self, vocab_size, n_segment, max_len, embed_dim, n_layers, attn_heads, dropout
+    ):
+        super().__init__()
+        self.embedding = BERTEmbedding(
+            vocab_size, n_segment, max_len, embed_dim, dropout
+        )
+        self.encoder_layer = nn.TransformerEncoderLayer(
+            embed_dim, attn_heads, embed_dim * 4
+        )
+        self.encoder_block = nn.TransformerEncoder(self.encoder_layer, n_layers)
+
+    def forward(self, seq, seg):
+        out = self.embedding(seq, seg)
+        out = self.encoder_block(out)
+        return out
