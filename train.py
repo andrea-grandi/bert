@@ -94,10 +94,12 @@ def load_data(input_ids, attention_mask, labels, batch_size=32):
 # Example usage
 if __name__ == "__main__":
     input_ids = torch.randint(0, 10000, (1000, 128))  # esempio di dati (batch_size, seq_len)
-    attention_mask = torch.ones_like(input_ids)      # esempio di maschera di attenzione
+    attention_mask = torch.ones_like(input_ids)       # esempio di maschera di attenzione
     labels = torch.randint(0, 2, (1000,))             # esempio di etichette per la classificazione binaria
     
     train_dataloader, val_dataloader = load_data(input_ids, attention_mask, labels)
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
     # Inizializzare il modello BERT
     vocab_size = 10000  # Esempio di dimensione del vocabolario
@@ -111,5 +113,5 @@ if __name__ == "__main__":
     model = BERT(vocab_size, d_model, n_layers, h, d_ff, seq_len, dropout)
     
     # Training
-    train(model, train_dataloader, val_dataloader, epochs=3, lr=5e-5, device='cuda' if torch.cuda.is_available() else 'cpu')
+    train(model, train_dataloader, val_dataloader, epochs=3, lr=5e-5, device=device)
 
